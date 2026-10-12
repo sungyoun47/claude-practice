@@ -1,0 +1,730 @@
+<title>크로노 스톱워치</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;700&family=Archivo:wdth,wght@75..125,500;75..125,800&family=IBM+Plex+Sans+KR:wght@500;600;700&display=swap">
+<style>
+/* Layout: color-blocked, playful skincare-shop energy. Bold condensed caps for headings, pill buttons with hard shadows,
+   a full-bleed backdrop (default original faceted pattern, or a photo the viewer picks) with white glass panels for legibility.
+   On phones the start/lap buttons pin to the bottom edge for one-handed use. */
+:root {
+  --ink: #141414;
+  --paper: #FFFFFF;
+  --cream: #FFF6D9;
+  --yellow: #FFD60A;
+  --pink: #FF5C97;
+  --mint: #4CD9A0;
+  --blue: #5AA8FF;
+  --muted: #4D4D4D;
+  --glass: rgba(255, 255, 255, 0.92);
+  --fast: #0A7A4F;
+  --slow: #B53A0A;
+  --font-display: "Azeret Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-head: "Archivo", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  color-scheme: light;
+}
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  min-height: 100%;
+}
+
+/* Backdrop: fixed, behind everything */
+#backdrop {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-color: var(--cream);
+  /* Default backdrop: an original faceted, Cubism-inspired composition (not a copy of any painting) */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 1000' preserveAspectRatio='xMidYMid slice'><rect width='1600' height='1000' fill='%23E9C46A'/><polygon points='0,0 700,0 420,520 0,380' fill='%232F5D9E'/><polygon points='700,0 1600,0 1600,300 980,640 420,520' fill='%23C8452C'/><polygon points='0,380 420,520 260,1000 0,1000' fill='%23F1E6C8'/><polygon points='420,520 980,640 1120,1000 260,1000' fill='%231E2B3A'/><polygon points='980,640 1600,300 1600,1000 1120,1000' fill='%23E08E2B'/><polygon points='1600,300 1600,0 1250,0 1100,240' fill='%23F1E6C8'/><path d='M420 520 L980 640 M0 380 L700 0 M700 0 L1100 240 L980 640 M260 1000 L420 520' stroke='%23141414' stroke-width='6' fill='none'/></svg>");
+  background-size: cover;
+  background-position: center;
+}
+#backdrop.photo {
+  background-image: linear-gradient(180deg, rgba(20, 20, 20, 0.12), rgba(20, 20, 20, 0.45)), var(--photo);
+  background-size: cover;
+  background-position: center;
+}
+
+.wrap {
+  max-width: 1080px; margin: 0 auto;
+  padding-inline: clamp(16px, 4vw, 40px); padding-block: clamp(20px, 4vw, 40px);
+  display: flex; flex-direction: column; gap: clamp(20px, 3vw, 32px);
+}
+
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand {
+  margin: 0; font-family: var(--font-head); font-weight: 800; font-stretch: 112%;
+  font-size: clamp(1.5rem, 4vw, 2.1rem); line-height: 1; text-transform: uppercase; letter-spacing: -0.01em;
+  background: var(--paper); padding: 10px 18px 11px; border: 2px solid var(--ink); border-radius: 999px;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.status {
+  display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.8125rem;
+  padding: 6px 14px 6px 12px; border: 2px solid var(--ink); border-radius: 999px; background: var(--paper);
+}
+.status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--blue); border: 1.5px solid var(--ink); }
+.status[data-state="running"] .dot { background: var(--pink); }
+.status[data-state="paused"] .dot { background: var(--yellow); }
+
+.bgtools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 48px); align-items: start; }
+@media (max-width: 820px) { main { grid-template-columns: minmax(0, 1fr); } }
+
+.instrument { display: flex; flex-direction: column; align-items: center; gap: 18px; min-width: 0; }
+.dial-card {
+  width: 100%; max-width: 400px; background: var(--glass); border: 2px solid var(--ink); border-radius: 28px;
+  padding: clamp(12px, 3vw, 20px); box-shadow: 8px 8px 0 var(--ink); backdrop-filter: blur(6px);
+}
+.dial { width: 100%; height: auto; aspect-ratio: 1; display: block; }
+.readout-card {
+  width: 100%; max-width: 400px; background: var(--ink); color: var(--paper); border-radius: 22px;
+  padding: 14px 18px; box-shadow: 6px 6px 0 var(--pink); text-align: center;
+}
+.readout {
+  font-family: var(--font-display); font-weight: 700; font-size: clamp(2.5rem, 10vw, 4rem);
+  line-height: 1.05; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; white-space: nowrap;
+}
+.readout .frac { font-size: 0.5em; color: var(--yellow); }
+.lapnow { font-family: var(--font-display); font-size: 0.875rem; color: var(--paper); font-variant-numeric: tabular-nums; min-height: 1.4em; }
+
+.pushers { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 400px; }
+.btn {
+  height: 58px; border-radius: 999px; font: 800 1.05rem var(--font-head); font-stretch: 105%; text-transform: uppercase; letter-spacing: 0.02em;
+  cursor: pointer; border: 2px solid var(--ink); background: var(--paper); color: var(--ink);
+  box-shadow: 0 5px 0 var(--ink);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease;
+}
+.btn:hover:not(:disabled) { background: var(--yellow); }
+.btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+.btn:focus-visible, .ghost:focus-visible, .photo-btn:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: 0 5px 0 rgba(20, 20, 20, 0.45); }
+.btn.primary { background: var(--pink); }
+.btn.primary:hover:not(:disabled) { background: var(--pink); filter: brightness(1.06); }
+.btn.primary[data-mode="stop"] { background: var(--mint); }
+.btn.primary[data-mode="stop"]:hover:not(:disabled) { background: var(--mint); filter: brightness(1.06); }
+.btn.flash { background: var(--yellow); }
+.btn.armed { background: var(--pink); }
+
+.keys { font-size: 0.8125rem; color: var(--muted); display: flex; gap: 6px 16px; flex-wrap: wrap; justify-content: center; margin: 0; padding: 0; list-style: none; }
+.keys li { display: inline-flex; align-items: center; gap: 6px; }
+kbd {
+  font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; padding: 1px 7px; color: var(--ink); background: var(--yellow);
+  border: 2px solid var(--ink); border-radius: 6px;
+}
+
+/* dial */
+.bezel { fill: var(--ink); }
+.face { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
+.sub-face-min { fill: #FFE98A; }
+.sub-face-hr { fill: #BDF2DA; }
+.tick-major { stroke: var(--ink); stroke-width: 2.4; }
+.tick-sec { stroke: var(--ink); stroke-width: 1.2; }
+.tick-minor { stroke: var(--muted); stroke-width: 0.7; }
+.num { font-family: var(--font-display); font-size: 13px; font-weight: 700; fill: var(--ink); }
+.tachy { font-family: var(--font-display); font-size: 9.5px; font-weight: 700; fill: var(--paper); }
+.tachy-word { font-family: var(--font-head); font-size: 8px; font-weight: 800; letter-spacing: 2px; fill: var(--yellow); }
+.tachy-tick { stroke: var(--paper); stroke-width: 1.2; }
+.sub-ring { fill: none; stroke: var(--ink); stroke-width: 1.4; }
+.sub-tick { stroke: var(--muted); stroke-width: 0.8; }
+.sub-tick-major { stroke: var(--ink); stroke-width: 1.4; }
+.sub-num { font-family: var(--font-display); font-size: 7.5px; font-weight: 700; fill: var(--ink); }
+.sub-label { font-family: var(--font-display); font-size: 6.5px; font-weight: 700; letter-spacing: 1px; fill: var(--ink); }
+.sub-hand { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
+.sub-pin { fill: var(--ink); }
+.dial-print { font-family: var(--font-display); font-size: 7.5px; font-weight: 700; letter-spacing: 1.5px; fill: var(--muted); }
+.sec-hand { stroke: var(--pink); stroke-width: 2.2; stroke-linecap: round; }
+.sec-fill { fill: var(--pink); }
+.pin-hole { fill: var(--paper); }
+
+/* lap log */
+.log {
+  background: var(--glass); border: 2px solid var(--ink); border-radius: 28px;
+  padding: clamp(18px, 2.5vw, 26px); display: flex; flex-direction: column; gap: 16px; min-width: 0;
+  box-shadow: 8px 8px 0 var(--ink); backdrop-filter: blur(6px);
+}
+.log-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+h2 {
+  font-family: var(--font-head); font-weight: 800; font-stretch: 112%; text-transform: uppercase;
+  font-size: 1.1rem; margin: 0; letter-spacing: 0.01em;
+  background: var(--blue); color: var(--ink); padding: 4px 14px; border: 2px solid var(--ink); border-radius: 999px;
+}
+.ghost {
+  font: 700 0.875rem var(--font-body); color: var(--ink); background: var(--paper);
+  border: 2px solid var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; box-shadow: 0 3px 0 var(--ink);
+}
+.ghost:hover:not(:disabled) { background: var(--yellow); }
+.ghost:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.ghost:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+.dist { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 700; font-size: 0.875rem; }
+.dist input {
+  width: 6.5rem; font: 700 1rem var(--font-display); padding: 6px 10px; color: var(--ink);
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 12px;
+}
+.dist small { color: var(--muted); font-weight: 500; font-size: 0.8125rem; }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0; }
+@media (max-width: 480px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stats div {
+  display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 10px 12px;
+  border: 2px solid var(--ink); border-radius: 16px; background: var(--paper);
+}
+.stats div:nth-child(1) { background: #FFF0A6; }
+.stats div:nth-child(2) { background: #D9E9FF; }
+.stats div.s-fast { background: #BDF2DA; }
+.stats div.s-slow { background: #FFD3E2; }
+.stats dt { font-size: 0.75rem; font-weight: 700; color: var(--ink); }
+.stats dd { margin: 0; font-family: var(--font-display); font-size: 0.98rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.table-wrap { max-height: 420px; overflow: auto; border: 2px solid var(--ink); border-radius: 18px; background: var(--paper); }
+@media (max-width: 820px) { .table-wrap { max-height: none; } }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th {
+  font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink); text-align: left;
+  padding: 10px 14px; position: sticky; top: 0; background: var(--yellow); z-index: 1; border-bottom: 2px solid var(--ink);
+}
+th:last-child, td:last-child { text-align: right; }
+td { padding: 10px 14px; border-bottom: 1px solid #E4E4E4; vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+td.no { width: 3.5rem; color: var(--ink); font-family: var(--font-display); font-weight: 700; font-size: 0.875rem; }
+td.split .t { font-family: var(--font-display); font-weight: 700; font-size: 1rem; white-space: nowrap; }
+td.split .spd { font-family: var(--font-display); font-size: 0.75rem; color: var(--muted); margin-left: 10px; white-space: nowrap; }
+td.total { font-family: var(--font-display); font-size: 0.875rem; color: var(--muted); white-space: nowrap; }
+.bar { height: 6px; background: #EFEFEF; border-radius: 999px; margin-top: 6px; max-width: 11rem; margin-right: 12px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--blue); border-radius: 999px; }
+tr.fast td { background: #E9FBF3; }
+tr.fast .t { color: var(--fast); }
+tr.fast .bar i { background: var(--mint); }
+tr.slow td { background: #FFF0F6; }
+tr.slow .t { color: var(--slow); }
+tr.slow .bar i { background: var(--pink); }
+tr.current td { background: #FFF8D6; }
+tr.current .bar i { background: var(--yellow); }
+.chip {
+  font: 800 0.6875rem var(--font-head); margin-left: 8px; padding: 1px 8px; border-radius: 999px;
+  border: 2px solid var(--ink); vertical-align: 1px; background: var(--paper); color: var(--ink);
+}
+.chip.fast { background: var(--mint); }
+.chip.slow { background: var(--pink); }
+.empty { color: var(--ink); font-size: 0.9rem; margin: 0; padding: 14px 16px; max-width: 36em; background: var(--paper); border: 2px dashed var(--ink); border-radius: 16px; }
+#copybox {
+  width: 100%; min-height: 8rem; font-family: var(--font-display); font-size: 0.8125rem;
+  background: var(--paper); color: var(--ink); border: 2px solid var(--ink); border-radius: 14px; padding: 10px; resize: vertical;
+}
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* background picker */
+.photo-btn {
+  font: 700 0.875rem var(--font-body); color: var(--ink); background: var(--mint); cursor: pointer;
+  border: 2px solid var(--ink); border-radius: 999px; padding: 6px 14px; box-shadow: 0 3px 0 var(--ink); display: inline-block;
+}
+.photo-btn:hover { filter: brightness(1.05); }
+.photo-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.photo-note { font-size: 0.75rem; color: var(--paper); margin: 0; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+.photo-note[hidden] { display: none; }
+
+/* touch screens: no keyboard hints; buttons pinned to the bottom edge within thumb reach */
+@media (hover: none) {
+  .keys { display: none; }
+}
+@media (max-width: 820px) {
+  .wrap { padding-bottom: 150px; }
+  .pushers {
+    position: fixed; left: 0; right: 0; bottom: 0; max-width: none; z-index: 5;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: var(--paper); border-top: 2px solid var(--ink);
+  }
+  .pushers .btn { height: 76px; font-size: 1.2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .ghost, .photo-btn { transition: none; }
+  .btn:active:not(:disabled), .ghost:active:not(:disabled), .photo-btn:active { transform: none; }
+}
+</style>
+
+<div id="backdrop" aria-hidden="true"></div>
+
+<div class="wrap">
+  <header>
+    <h1 class="brand">크로노 스톱워치</h1>
+    <div class="bgtools">
+      <label class="photo-btn" for="photo-input">배경 사진 선택</label>
+      <input id="photo-input" type="file" accept="image/*" hidden>
+      <button class="ghost" id="btn-bg-reset" type="button" hidden>기본 배경</button>
+      <span class="status" id="status" data-state="idle" aria-live="polite"><span class="dot"></span><span id="status-text">대기</span></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="instrument" aria-label="측정">
+      <div class="dial-card">
+        <svg class="dial" id="dial" viewBox="0 0 400 400" aria-hidden="true"></svg>
+      </div>
+
+      <div class="readout-card">
+        <div class="readout" id="readout" role="timer" aria-label="경과 시간"><span id="r-main">00:00</span><span class="frac">.<span id="r-frac">00</span></span></div>
+        <div class="lapnow" id="lapnow">시작을 누르면 측정합니다</div>
+      </div>
+
+      <div class="pushers">
+        <button class="btn" id="btn-secondary" type="button" disabled>랩</button>
+        <button class="btn primary" id="btn-primary" type="button" data-mode="start">시작</button>
+      </div>
+
+      <ul class="keys" aria-label="키보드 단축키">
+        <li><kbd>Space</kbd> 시작·정지</li>
+        <li><kbd>L</kbd> 랩</li>
+        <li><kbd>R</kbd> 재설정(정지 중)</li>
+      </ul>
+      <p class="photo-note" id="photo-note" hidden>배경 사진은 이 화면에서만 쓰이며 저장되지 않습니다.</p>
+    </section>
+
+    <section class="log" aria-labelledby="log-title">
+      <div class="log-head">
+        <h2 id="log-title">랩 기록</h2>
+        <button class="ghost" id="btn-copy" type="button" disabled>기록 복사</button>
+      </div>
+
+      <div class="dist">
+        <label for="lap-dist">구간 거리</label>
+        <input id="lap-dist" type="number" inputmode="numeric" min="1" max="100000" step="1" value="400">
+        <span>m</span>
+        <small>거리를 입력하면 구간마다 400m 환산 페이스를 함께 보여줍니다.</small>
+      </div>
+
+      <dl class="stats">
+        <div><dt>완료 랩</dt><dd id="st-count">0</dd></div>
+        <div><dt>평균 랩 타임</dt><dd id="st-avg">—</dd></div>
+        <div class="s-fast"><dt>최고 랩 타임</dt><dd id="st-fast">—</dd></div>
+        <div class="s-slow"><dt>최저 랩 타임</dt><dd id="st-slow">—</dd></div>
+      </dl>
+
+      <p class="empty" id="empty">아직 기록이 없습니다. 측정 중에 <strong>랩</strong> 버튼이나 <kbd>L</kbd> 키를 누르면 기록이 쌓입니다. <strong>랩 타임</strong>은 직전 랩 이후 구간 시간이고, <strong>스플릿</strong>은 출발부터의 누적 시간입니다.</p>
+
+      <div class="table-wrap" id="table-wrap" hidden>
+        <table>
+          <thead><tr><th scope="col">랩</th><th scope="col">랩 타임</th><th scope="col">스플릿</th></tr></thead>
+          <tbody id="laps"></tbody>
+        </table>
+      </div>
+
+      <label for="copybox" class="sr-only">복사할 기록</label>
+      <textarea id="copybox" readonly hidden></textarea>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const STORE_KEY = "chrono-stopwatch-v1";
+  const C = 200;
+  const MIN_C = [200, 124];
+  const HR_C = [200, 276];
+
+  /* ---------- background photo (viewer's own image, kept in memory only) ---------- */
+  const backdrop = $("backdrop");
+  const photoInput = $("photo-input");
+  const photoNote = $("photo-note");
+  const resetBtn = $("btn-bg-reset");
+  let photoUrl = null;
+  photoInput.addEventListener("change", () => {
+    const file = photoInput.files && photoInput.files[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    try {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+      photoUrl = URL.createObjectURL(file);
+      backdrop.style.setProperty("--photo", `url("${photoUrl}")`);
+      backdrop.classList.add("photo");
+      resetBtn.hidden = false;
+      photoNote.hidden = false;
+    } catch (e) { /* ignore; keep the default backdrop */ }
+  });
+  resetBtn.addEventListener("click", () => {
+    backdrop.classList.remove("photo");
+    backdrop.style.removeProperty("--photo");
+    if (photoUrl) { try { URL.revokeObjectURL(photoUrl); } catch (e) {} photoUrl = null; }
+    photoInput.value = "";
+    resetBtn.hidden = true;
+    photoNote.hidden = true;
+  });
+
+  /* ---------- dial ---------- */
+  const dial = $("dial");
+  function el(name, attrs, parent) {
+    const n = document.createElementNS(SVGNS, name);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    (parent || dial).appendChild(n);
+    return n;
+  }
+  function polar(r, deg, cx = C, cy = C) {
+    const a = (deg * Math.PI) / 180;
+    return [cx + r * Math.sin(a), cy - r * Math.cos(a)];
+  }
+  function line(r1, r2, deg, cls, cx, cy, parent) {
+    const [x1, y1] = polar(r1, deg, cx, cy);
+    const [x2, y2] = polar(r2, deg, cx, cy);
+    return el("line", { x1: x1.toFixed(2), y1: y1.toFixed(2), x2: x2.toFixed(2), y2: y2.toFixed(2), class: cls }, parent);
+  }
+
+  el("circle", { cx: C, cy: C, r: 197, class: "bezel" });
+  el("circle", { cx: C, cy: C, r: 172, class: "face" });
+
+  // Tachymeter bezel: speed over 1 km = 3600 / seconds elapsed
+  [500, 400, 300, 250, 200, 180, 150, 120, 100, 90, 80, 75, 70, 65, 60].forEach((v) => {
+    const deg = 21600 / v;
+    line(173, 177, deg, "tachy-tick");
+    const [x, y] = polar(186, deg);
+    el("text", { x: x.toFixed(2), y: y.toFixed(2), class: "tachy", "text-anchor": "middle", "dominant-baseline": "central",
+      transform: `rotate(${deg.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)})` }).textContent = v;
+  });
+  {
+    const deg = 22;
+    const [x, y] = polar(186, deg);
+    el("text", { x: x.toFixed(2), y: y.toFixed(2), class: "tachy-word", "text-anchor": "middle", "dominant-baseline": "central",
+      transform: `rotate(${deg} ${x.toFixed(2)} ${y.toFixed(2)})` }).textContent = "TACHYMETER";
+  }
+
+  // 1/5-second graduations
+  for (let i = 0; i < 300; i++) {
+    const deg = i * 1.2;
+    if (i % 25 === 0) line(150, 170, deg, "tick-major");
+    else if (i % 5 === 0) line(158, 170, deg, "tick-sec");
+    else line(164, 170, deg, "tick-minor");
+  }
+  for (let k = 1; k <= 12; k++) {
+    const [x, y] = polar(136, k * 30);
+    el("text", { x: x.toFixed(2), y: y.toFixed(2), class: "num", "text-anchor": "middle", "dominant-baseline": "central" }).textContent = k * 5;
+  }
+  el("text", { x: C, y: 214, class: "dial-print", "text-anchor": "middle", "dominant-baseline": "central" }).textContent = "1/5 SEC";
+
+  function subdial([cx, cy], count, majorEvery, labels, caption, faceClass) {
+    el("circle", { cx, cy, r: 38, class: faceClass });
+    el("circle", { cx, cy, r: 38, class: "sub-ring" });
+    for (let i = 0; i < count; i++) {
+      const deg = (i * 360) / count;
+      const major = i % majorEvery === 0;
+      line(major ? 30 : 33, 37, deg, major ? "sub-tick-major" : "sub-tick", cx, cy);
+    }
+    labels.forEach(([deg, txt]) => {
+      const [x, y] = polar(23, deg, cx, cy);
+      el("text", { x: x.toFixed(2), y: y.toFixed(2), class: "sub-num", "text-anchor": "middle", "dominant-baseline": "central" }).textContent = txt;
+    });
+    el("text", { x: cx, y: cy + 12, class: "sub-label", "text-anchor": "middle", "dominant-baseline": "central" }).textContent = caption;
+    const g = el("g", {});
+    el("line", { x1: cx, y1: cy + 6, x2: cx, y2: cy - 31, class: "sub-hand" }, g);
+    el("circle", { cx, cy, r: 3, class: "sub-pin" });
+    return g;
+  }
+  const minHand = subdial(MIN_C, 30, 5, [[0, "30"], [120, "10"], [240, "20"]], "MIN", "sub-face-min");
+  const hrHand = subdial(HR_C, 12, 3, [[0, "12"], [90, "3"], [180, "6"], [270, "9"]], "HR", "sub-face-hr");
+
+  const secHand = el("g", {});
+  el("line", { x1: C, y1: 234, x2: C, y2: 36, class: "sec-hand" }, secHand);
+  el("circle", { cx: C, cy: 226, r: 4.5, class: "sec-fill" }, secHand);
+  el("circle", { cx: C, cy: C, r: 6.5, class: "sec-fill" });
+  el("circle", { cx: C, cy: C, r: 2.4, class: "pin-hole" });
+
+  /* ---------- state ---------- */
+  // base: raw elapsed ms while stopped (never rounded, so pause/resume adds no drift).
+  // laps: cumulative ms at each lap press, floored to 1/100 s for display and for split math.
+  const state = { running: false, base: 0, startPerf: 0, laps: [] };
+  let raf = 0;
+  let armed = false, armTimer = 0;
+
+  const elapsed = () => (state.running ? state.base + (performance.now() - state.startPerf) : state.base);
+  const stamp = () => Math.floor(elapsed() / 10) * 10;
+  const dist = () => { const v = Number($("lap-dist").value); return v > 0 ? v : 0; };
+
+  const pad = (n) => String(n).padStart(2, "0");
+  function parts(ms) {
+    ms = Math.max(0, Math.floor(ms));
+    const cs = Math.floor(ms / 10) % 100;
+    const s = Math.floor(ms / 1000) % 60;
+    const m = Math.floor(ms / 60000) % 60;
+    const h = Math.floor(ms / 3600000);
+    return { main: (h > 0 ? h + ":" + pad(m) : pad(m)) + ":" + pad(s), frac: pad(cs) };
+  }
+  const fmt = (ms) => { const p = parts(ms); return p.main + "." + p.frac; };
+  // Pace normalized to 400 m, the usual way coaches compare laps of different lengths.
+  const spdText = (ms) => { const d = dist(); return d > 0 && ms > 0 ? "400m당 " + fmt((ms * 400) / d) : ""; };
+
+  function save() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({
+        base: state.running ? elapsed() : state.base,
+        runningSince: state.running ? Date.now() : null,
+        laps: state.laps,
+        dist: dist(),
+      }));
+    } catch (e) { /* storage unavailable: keep working in memory */ }
+  }
+  // autoStart=false: a tab that only mirrors another tab's run shows the time but never starts a second clock.
+  function applyStored(d, autoStart = true) {
+    if (!d || typeof d.base !== "number") return false;
+    state.laps = Array.isArray(d.laps) ? d.laps.filter((n) => typeof n === "number") : [];
+    if (typeof d.dist === "number" && d.dist > 0) $("lap-dist").value = d.dist;
+    state.base = d.base + (d.runningSince ? Math.max(0, Date.now() - d.runningSince) : 0);
+    if (d.runningSince && autoStart) start();
+    return true;
+  }
+  function load() {
+    try { applyStored(JSON.parse(localStorage.getItem(STORE_KEY) || "null")); } catch (e) { /* ignore unreadable storage */ }
+  }
+  // Another tab changed the record while this tab is stopped: follow it, so the two tabs don't overwrite each other.
+  window.addEventListener("storage", (e) => {
+    if (e.key !== STORE_KEY || state.running) return;
+    try {
+      if (e.newValue === null) { state.base = 0; state.laps = []; }
+      else applyStored(JSON.parse(e.newValue), false);
+    } catch (err) { return; }
+    updateControls(); render(); renderLaps();
+  });
+
+  /* ---------- wake lock (keeps the screen on while timing, when allowed) ---------- */
+  let wake = null;
+  async function holdWake() {
+    try {
+      if ("wakeLock" in navigator && !wake) {
+        wake = await navigator.wakeLock.request("screen");
+        wake.addEventListener("release", () => { wake = null; });
+      }
+    } catch (e) { wake = null; }
+  }
+  function dropWake() { try { if (wake) wake.release(); } catch (e) {} wake = null; }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && state.running) holdWake();
+  });
+
+  /* ---------- actions ---------- */
+  function start() {
+    if (state.running) return;
+    disarm();
+    state.startPerf = performance.now();
+    state.running = true;
+    holdWake();
+    save(); updateControls(); renderLaps();
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(frame);
+  }
+  function stop() {
+    if (!state.running) return;
+    state.base = elapsed();
+    state.running = false;
+    cancelAnimationFrame(raf);
+    dropWake();
+    save(); updateControls(); render(); renderLaps();
+  }
+  function toggle() { state.running ? stop() : start(); }
+  function flashLap() {
+    const b = $("btn-secondary");
+    b.classList.add("flash");
+    setTimeout(() => b.classList.remove("flash"), 220);
+    try { if (navigator.vibrate) navigator.vibrate(25); } catch (e) {}
+  }
+  function lap() {
+    if (!state.running) return;
+    state.laps.push(stamp());
+    flashLap();
+    save(); renderLaps();
+  }
+  // Reset takes two presses within 3 seconds, so a stray tap cannot wipe the record.
+  function arm() {
+    armed = true;
+    clearTimeout(armTimer);
+    armTimer = setTimeout(disarm, 3000);
+    updateControls();
+  }
+  function disarm() {
+    armed = false;
+    clearTimeout(armTimer);
+    updateControls();
+  }
+  function reset() {
+    if (state.running) return;
+    disarm();
+    state.base = 0; state.laps = [];
+    save(); updateControls(); render(); renderLaps();
+  }
+
+  /* ---------- rendering ---------- */
+  const rMain = $("r-main"), rFrac = $("r-frac"), lapNow = $("lapnow");
+  let current = null; // live row refs
+
+  function frame() {
+    render();
+    if (state.running) raf = requestAnimationFrame(frame);
+  }
+
+  function render() {
+    const t = elapsed();
+    const p = parts(t);
+    if (rMain.textContent !== p.main) rMain.textContent = p.main;
+    if (rFrac.textContent !== p.frac) rFrac.textContent = p.frac;
+
+    secHand.setAttribute("transform", `rotate(${((t % 60000) / 60000) * 360} ${C} ${C})`);
+    minHand.setAttribute("transform", `rotate(${((t % 1800000) / 1800000) * 360} ${MIN_C[0]} ${MIN_C[1]})`);
+    hrHand.setAttribute("transform", `rotate(${((t % 43200000) / 43200000) * 360} ${HR_C[0]} ${HR_C[1]})`);
+
+    if (!state.running && t === 0) {
+      lapNow.textContent = "시작을 누르면 측정합니다";
+    } else {
+      const last = state.laps.length ? state.laps[state.laps.length - 1] : 0;
+      const cur = t - last;
+      lapNow.textContent = `현재 랩 ${state.laps.length + 1} · ${fmt(cur)}`;
+      if (current) {
+        current.split.textContent = fmt(cur);
+        current.total.textContent = fmt(t);
+        current.spd.textContent = spdText(cur);
+        current.bar.style.width = current.max ? Math.min(cur / current.max, 1) * 100 + "%" : "0";
+      }
+    }
+  }
+
+  function updateControls() {
+    const t = elapsed();
+    const primary = $("btn-primary"), secondary = $("btn-secondary");
+    if (state.running) {
+      primary.textContent = "정지"; primary.dataset.mode = "stop";
+      secondary.textContent = "랩"; secondary.disabled = false; secondary.classList.remove("armed");
+      secondary.setAttribute("aria-label", "랩 기록");
+    } else {
+      primary.textContent = t > 0 ? "재개" : "시작"; primary.dataset.mode = "start";
+      secondary.disabled = t === 0;
+      if (t > 0) {
+        secondary.textContent = armed ? "정말 삭제" : "재설정";
+        secondary.classList.toggle("armed", armed);
+        secondary.setAttribute("aria-label", armed ? "기록 삭제 확인: 한 번 더 누르세요" : "재설정");
+      } else {
+        secondary.textContent = "랩";
+        secondary.classList.remove("armed");
+        secondary.removeAttribute("aria-label");
+      }
+    }
+    const status = $("status");
+    const s = state.running ? "running" : t > 0 ? "paused" : "idle";
+    status.dataset.state = s;
+    $("status-text").textContent = { running: "측정 중", paused: "일시정지", idle: "대기" }[s];
+  }
+
+  function row(no, split, total, cls, max, chip, chipCls) {
+    const tr = document.createElement("tr");
+    if (cls) tr.className = cls;
+    const tdNo = document.createElement("td"); tdNo.className = "no"; tdNo.textContent = pad(no);
+    const tdSplit = document.createElement("td"); tdSplit.className = "split";
+    const t = document.createElement("span"); t.className = "t"; t.textContent = fmt(split);
+    const spd = document.createElement("span"); spd.className = "spd"; spd.textContent = spdText(split);
+    const wrap = document.createElement("div"); wrap.append(t, spd);
+    if (chip) {
+      const c = document.createElement("span"); c.className = "chip " + (chipCls || ""); c.textContent = chip;
+      wrap.appendChild(c);
+    }
+    const bar = document.createElement("div"); bar.className = "bar";
+    const fill = document.createElement("i"); bar.appendChild(fill);
+    fill.style.width = max ? Math.min(split / max, 1) * 100 + "%" : "0";
+    tdSplit.append(wrap, bar);
+    const tdTotal = document.createElement("td"); tdTotal.className = "total"; tdTotal.textContent = fmt(total);
+    tr.append(tdNo, tdSplit, tdTotal);
+    return { tr, split: t, spd, total: tdTotal, bar: fill, max };
+  }
+
+  function renderLaps() {
+    const tbody = $("laps");
+    tbody.textContent = "";
+    current = null;
+    const t = elapsed();
+    const L = state.laps;
+    const splits = L.map((v, i) => v - (i ? L[i - 1] : 0));
+    const max = splits.length ? Math.max(...splits) : 0;
+
+    let fastI = -1, slowI = -1;
+    if (splits.length >= 2) {
+      fastI = 0; slowI = 0;
+      splits.forEach((s, i) => { if (s < splits[fastI]) fastI = i; if (s > splits[slowI]) slowI = i; });
+      if (splits[fastI] === splits[slowI]) { fastI = -1; slowI = -1; }
+    }
+
+    $("st-count").textContent = splits.length;
+    $("st-avg").textContent = splits.length ? fmt(splits.reduce((a, b) => a + b, 0) / splits.length) : "—";
+    $("st-fast").textContent = splits.length >= 2 ? fmt(Math.min(...splits)) : "—";
+    $("st-slow").textContent = splits.length >= 2 ? fmt(Math.max(...splits)) : "—";
+
+    const hasRows = t > 0 || L.length > 0;
+    $("empty").hidden = hasRows;
+    $("table-wrap").hidden = !hasRows;
+    $("btn-copy").disabled = L.length === 0;
+
+    if (t > 0) {
+      const last = L.length ? L[L.length - 1] : 0;
+      current = row(L.length + 1, t - last, t, "current", max, state.running ? "진행 중" : "정지됨", "");
+      tbody.appendChild(current.tr);
+    }
+    for (let i = L.length - 1; i >= 0; i--) {
+      const cls = i === fastI ? "fast" : i === slowI ? "slow" : "";
+      const chip = i === fastI ? "최고" : i === slowI ? "최저" : "";
+      const chipCls = i === fastI ? "fast" : i === slowI ? "slow" : "";
+      tbody.appendChild(row(i + 1, splits[i], L[i], cls, max, chip, chipCls).tr);
+    }
+  }
+
+  /* ---------- copy (tab-separated, pastes into Excel) ---------- */
+  const copyBtn = $("btn-copy"), copybox = $("copybox");
+  copyBtn.addEventListener("click", () => {
+    const L = state.laps;
+    const d = dist();
+    const lines = [`랩\t랩 타임\t스플릿${d > 0 ? "\t400m 환산" : ""}`];
+    L.forEach((v, i) => {
+      const sp = v - (i ? L[i - 1] : 0);
+      lines.push(`${i + 1}\t${fmt(sp)}\t${fmt(v)}${d > 0 ? "\t" + fmt((sp * 400) / d) : ""}`);
+    });
+    lines.push(`전체\t\t${fmt(stamp())}`);
+    const text = lines.join("\n");
+    const done = (msg) => { copyBtn.textContent = msg; setTimeout(() => { copyBtn.textContent = "기록 복사"; }, 1600); };
+    const fallback = () => {
+      copybox.value = text; copybox.hidden = false; copybox.focus(); copybox.select();
+      done("아래 내용을 직접 복사하세요");
+    };
+    try {
+      navigator.clipboard.writeText(text).then(() => { copybox.hidden = true; done("복사됨"); }, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  /* ---------- controls ---------- */
+  $("btn-primary").addEventListener("click", toggle);
+  $("btn-secondary").addEventListener("click", () => {
+    if (state.running) { lap(); return; }
+    if (elapsed() === 0) return;
+    if (!armed) { arm(); return; }
+    reset();
+  });
+  $("lap-dist").addEventListener("change", () => { save(); renderLaps(); });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || e.target.isContentEditable) return;
+    // e.code works the same with a Korean keyboard layout active
+    if (e.code === "Space") { e.preventDefault(); if (!e.repeat) toggle(); }
+    else if (e.code === "KeyL") { if (!e.repeat) lap(); }
+    else if (e.code === "KeyR") { if (!e.repeat) { if (!state.running && elapsed() > 0) { if (!armed) arm(); else reset(); } } }
+  });
+  // stop a focused button from also firing on Space release
+  document.addEventListener("keyup", (e) => {
+    if (e.code === "Space" && (e.target.tagName || "").toLowerCase() === "button") e.preventDefault();
+  });
+
+  load();
+  updateControls();
+  render();
+  renderLaps();
+})();
+</script>
